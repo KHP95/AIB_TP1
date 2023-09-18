@@ -40,10 +40,10 @@ PATH = os.path.dirname(__file__)
 
 
 # *중요! 각 csv파일은 무조건 data폴더 안에 있어야합니다.
-def load_data1(df1=None, split=True):
+def load_data1(df1=None, mode='split'):
     """
     data1을 불러와서 전처리된 데이터셋을 반환 
-    df를 입력하면 전처리만 진행
+    df를 입력하면 해당데이터셋 처리
 
     전처리:
     1. 'Sex'컬럼 원핫인코딩
@@ -51,11 +51,11 @@ def load_data1(df1=None, split=True):
 
     args:
         df1 : 전처리할 데이터프레임
-        split : True이면 전처리후 분리된 데이터 반환
+        mode : 'raw'= Xy만분리 'prepro'=Xy분리후 전처리, 'split'=전처리이후 train test분리 
     returns:
+        raw : X, y, df1
+        prepro : X, y
         split => X_train, X_test, y_train, y_test, data1_ct
-
-        not split => X, y, df (분리 이전데이터)
     """
     if df1 is None:
         file_path = os.path.join(PATH, 'data/Regression_data.csv')
@@ -63,10 +63,14 @@ def load_data1(df1=None, split=True):
 
     num_cols = list(df1.drop(columns=['Sex', 'Rings']))
     cat_cols = ['Sex']
+
     X = df1.drop('Rings', axis=1)
     y = df1.Rings
 
-    if split:
+    if mode=='raw':
+        return X, y, df1
+
+    elif mode == 'split':
         data1_ct = make_column_transformer(
             (OneHotEncoder(sparse_output=False), cat_cols),
             (StandardScaler(), num_cols),
@@ -80,25 +84,28 @@ def load_data1(df1=None, split=True):
         X_train = data1_ct.fit_transform(X_train)
         X_test = data1_ct.transform(X_test)
         return X_train, X_test, y_train, y_test, data1_ct
-    else:
-        return X, y, df1
+    
+    elif mode == 'prepro':
+        data1_ct = joblib.load(os.path.join(PATH, 'data/reg_ct.pkl'))
+        X = data1_ct.transform(X)
+        return X, y
     
 
-def load_data2(df2=None, split=True):
+def load_data2(df2=None, mode='split'):
     """
     data2을 불러와서 전처리된 데이터셋을 반환 
-    df를 입력하면 전처리만 진행
+    df를 입력하면 해당데이터셋 처리
 
     전처리:
     1. 수치형 표준화
 
     args:
-        df1 : 전처리할 데이터프레임
-        split : True이면 전처리후 분리된 데이터 반환
+        df2 : 전처리할 데이터프레임
+        mode : 'raw'= Xy만분리 'prepro'=Xy분리후 전처리, 'split'=전처리이후 train test분리 
     returns:
-        split => X_train, X_test, y_train, y_test, data1_ct
-
-        not split => X, y, df (분리 이전 데이터)
+        raw : X, y, df2
+        prepro : X, y
+        split => X_train, X_test, y_train, y_test, data2_ct
     """
     if df2 is None:
         file_path = os.path.join(PATH, 'data/binary_classification_data.csv')
@@ -110,7 +117,10 @@ def load_data2(df2=None, split=True):
     X = df2.drop(columns='target_class')
     y = df2.target_class
 
-    if split:
+    if mode=='raw':
+        return X, y, df2
+        
+    elif mode=='split':
         X_train, X_test, y_train, y_test = train_test_split(X,y,
                                                             test_size=.25,
                                                             stratify=y,
@@ -119,13 +129,16 @@ def load_data2(df2=None, split=True):
         X_train = data2_ct.fit_transform(X_train)
         X_test = data2_ct.transform(X_test)
         return X_train, X_test, y_train, y_test, data2_ct
-    else:
-        return X, y, df2
+    
+    elif mode == 'prepro':
+        data2_ct = joblib.load(os.path.join(PATH, 'data/bin_ct.pkl'))
+        X = data2_ct.transform(X)
+        return X, y
 
-def load_data3(df3=None, split=True):
+def load_data3(df3=None, mode='split'):
     """
-    data3을 불러와서 전처리된 데이터셋을 반환  
-    df를 입력하면 전처리만 진행
+    data3을 불러와서 전처리된 데이터셋을 반환 
+    df를 입력하면 해당데이터셋 처리
 
     전처리:  
     1. A400컬럼 드랍 drop
@@ -133,13 +146,12 @@ def load_data3(df3=None, split=True):
     3. 수치형 표준화
 
     args:
-        df1 : 전처리할 데이터프레임
-        split : True이면 전처리후 분리된 데이터 반환
-    
+        df3 : 전처리할 데이터프레임
+        mode : 'raw'= Xy만분리 'prepro'=Xy분리후 전처리, 'split'=전처리이후 train test분리 
     returns:
-        split => X_train, X_test, y_train, y_test, data1_ct
-
-        not split => X, y, df (전처리 이전데이터)
+        raw : X, y, df3
+        prepro : X, y
+        split => X_train, X_test, y_train, y_test, data3_ct
     """
     if df3 is None:
         file_path = os.path.join(PATH, 'data/mulit_classification_data.csv')
@@ -149,7 +161,8 @@ def load_data3(df3=None, split=True):
     y = df3.loc[:,'Pastry':]
     X = df3.drop(columns=y.columns, axis=1)
     y['label'] = np.argmax(y.values, axis=1) # label구분을 위한 컬럼추가
-    if not split:
+
+    if mode == 'raw':
         return X, y, df3
     
     X = X.drop(columns='TypeOfSteel_A400')
@@ -159,21 +172,27 @@ def load_data3(df3=None, split=True):
     num_cols = list(X.drop(columns=cat_cols))
 
     # 범주형 ohe, 나머지 표준화
-    data3_ct = make_column_transformer(
-        (StandardScaler(), num_cols),
-        (OneHotEncoder(sparse_output=False, drop='if_binary'), cat_cols),
-        remainder='passthrough'
-    )
-    data3_ct.set_output(transform='pandas')
+    if mode == 'split':
+        data3_ct = make_column_transformer(
+            (StandardScaler(), num_cols),
+            (OneHotEncoder(sparse_output=False, drop='if_binary'), cat_cols),
+            remainder='passthrough'
+        )
+        data3_ct.set_output(transform='pandas')
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.25,
-                                                        stratify=y['label'],
-                                                        random_state=42)
-    # 독립변수 28개, 종속변수 7개
-    X_train = data3_ct.fit_transform(X_train)
-    X_test = data3_ct.transform(X_test)
-    return X_train, X_test, y_train, y_test, data3_ct
+        X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                            test_size=0.25,
+                                                            stratify=y['label'],
+                                                            random_state=42)
+        # 독립변수 28개, 종속변수 7개
+        X_train = data3_ct.fit_transform(X_train)
+        X_test = data3_ct.transform(X_test)
+        return X_train, X_test, y_train, y_test, data3_ct
+    
+    elif mode == 'prepro':
+        data3_ct = joblib.load(os.path.join(PATH, 'data/multi_ct.pkl'))
+        X = data3_ct.transform(X)
+        return X, y
 
 
 # 각 모델 클래스는 위에서 선언한 model을 상속받아 필요한것만 오버라이딩
@@ -181,12 +200,12 @@ class Model:
     model_num = None # load_data호출시 모델번호. 
     
     def __init__(self):
-        # params : 모델파라미터 (private)
+        # params : 모델파라미터
         # model : 모델
-        # ct : 입력데이터 전처리기 (private)
+        # ct : 입력데이터 전처리기
         # features : 독립변수들 리스트
         # target : 종속변수
-        X, y, _ = self.load_data(split=False)
+        X, y, _ = self.load_data(mode='raw')
         self.params = {}
         self.model = None
         self.ct = None
@@ -217,30 +236,30 @@ class Model:
         if os.path.exists(file_path):
             self.model = joblib.load(file_path)
             self.params = self.model.get_params()
-            print('모델 불러오기 성공')
+            print(f'{name} 모델 불러오기 성공')
         else:
-            print('모델 불러오기 실패.. 학습진행')
+            print(f'{name} 모델 불러오기 실패.. 학습진행')
             self.model, train_time = self.train()
             self.params = self.model.get_params()
 
             # 학습 소요시간 print. 0.1초보다 작으면 ms단위로
             if train_time < 0.1:
-                print(f'모델학습 완료. 소요시간 {train_time:.2f}')
+                print(f'모델훈련 완료. 소요시간 {train_time:.2f}')
             else:
-                print(f'모델학습 완료. 소요시간 {train_time*1000:.2f}ms')
+                print(f'모델훈련 완료. 소요시간 {train_time*1000:.2f}ms')
 
 
 
     # 각 모델에 맞는 데이터를 불러오는 함수
     @classmethod
-    def load_data(cls, df=None, split=True):
+    def load_data(cls, df=None, mode='split'):
         match cls.model_num:
             case 1:
-                return load_data1(df1=df, split=split)
+                return load_data1(df1=df, mode=mode)
             case 2:
-                return load_data2(df2=df, split=split)
+                return load_data2(df2=df, mode=mode)
             case 3:
-                return load_data3(df3=df, split=split)
+                return load_data3(df3=df, mode=mode)
             case _:
                 raise ValueError(f'model_num 이상. 입력값 : {cls.model_num}')
             
@@ -321,25 +340,34 @@ class Model:
             train_time : 훈련소요시간(초)
         """
 
-        model = XGBRegressor(random_state=42,
-                             objective='reg:squarederror',
-                             tree_method='gpu_hist',
-                             gpu_id=0,
-                             eval_metric='rmse',
-                             early_stopping_rounds=30)
-        
-        model.set_params(**params)
-        
         # 데이터셋 준비
         if df is None:
             X_train, X_test, y_train, y_test = self.load_data()[:4]
         else:
             X_train, X_test, y_train, y_test = self.load_data(df=df)[:4]
     
+        # 모델 선언
+        if self.model_num == 1:
+            model = XGBRegressor(random_state=42,
+                                objective='reg:squarederror',
+                                tree_method='hist',
+                                eval_metric='rmse',
+                                early_stopping_rounds=30)
+            weight = None
+        elif self.model_num == 2:
+            model = XGBClassifier(random_state=42,
+                                  objective='binary:logistic',
+                                  eval_metric='aucpr',
+                                  tree_method='hist',
+                                  early_stopping_rounds=50)
+            weight = compute_sample_weight(class_weight='balanced', y=y_train)
+        model.set_params(**params)
+
         # 학습
         t1 = time.time()
         model.fit(X_train, y_train,
                   eval_set=[(X_test, y_test)],
+                  sample_weight=weight,
                   verbose=0)
         t2 = time.time()
         train_time = t2-t1
@@ -362,7 +390,7 @@ class Model:
             if X is None:
                 return None
         
-        X = self.ct.transform(X)
+        X = self.load_data(df=X, mode='prepro')[0]
         pred = self.model.predict(X)
 
         return pred
@@ -382,13 +410,12 @@ class Model:
 
             1의 precision, 1의 recall, 1의 f1, acc : 이진분류의 경우
         """
-        if df:
+        if df is not None:
             # array-like이면 dataframe으로 변환
             if isinstance(df, (np.ndarray|list|tuple)):
                 df = pd.DataFrame(df, columns=self.features+self.target)
             
-            X_test = df.drop(columns=self.target)
-            y_true = df[self.target]
+            X_test, y_true = self.load_data(df, mode='prepro')[:2]
         else:
             _, X_test, _, y_true, _ = self.load_data()
         
@@ -399,6 +426,7 @@ class Model:
             acc = np.mean(1-abs((y_pred - y_true) / y_true))
             r2 = r2_score(y_true, y_pred)
             return rmse, acc, r2
+        
         elif isinstance(self.model, XGBClassifier):
             precision = precision_score(y_true, y_pred, pos_label=1)
             recall = recall_score(y_true, y_pred, pos_label=1)
@@ -411,7 +439,6 @@ class Model:
         """
         모델을 저장하는 함수
         """
-        
         match self.model_num:
             case 1:
                 file_path = os.path.join(PATH, 'data/reg_BestModel.pkl')
@@ -437,7 +464,10 @@ class Model:
         returns:
             val_df : 검증용 데이터프레임
         """
-        val_df = self.load_data(split=False)[2] # df
+        val_df = self.load_data(mode='raw')[2] # df
+        if n_samples > val_df.shape[0]:
+            print(f"검증 샘플수가 데이터셋보다 많습니다. 최대범위 : {val_df.shape[0]}")
+            return None
         
         if seed:
             val_df = val_df.sample(n_samples, random_state=seed)
@@ -502,17 +532,17 @@ class Model3(Model):
         if os.path.exists(file_path):
             self.model2 = joblib.load(file_path)
             self.params2 = self.model.get_params()
-            print('모델2 불러오기 성공')
+            print('multi 모델2 불러오기 성공')
         else:
-            print('모델2 불러오기 실패.. 학습진행')
+            print('multi 모델2 불러오기 실패.. 학습진행')
             self.model2, train_time = self.train(case=2)
             self.params2 = self.model2.get_params()
 
             # 학습 소요시간 print. 0.1초보다 작으면 ms단위로
             if train_time < 0.1:
-                print(f'모델학습 완료. 소요시간 {train_time:.2f}')
+                print(f'multi 모델A 훈련완료. 소요시간 {train_time:.2f}')
             else:
-                print(f'모델학습 완료. 소요시간 {train_time*1000:.2f}ms')
+                print(f'multi 모델B 훈련완료. 소요시간 {train_time*1000:.2f}ms')
 
 
     def train(self, case=1, params=None, df=None):
@@ -544,11 +574,10 @@ class Model3(Model):
             y_testA = y_test.Other_Faults
 
             model = XGBClassifier(random_state=42,
-                                objective='binary:logistic',
-                                eval_metric='error',
-                                tree_method='gpu_hist',
-                                gpu_id=0,
-                                early_stopping_rounds=30)
+                                  objective='binary:logistic',
+                                  eval_metric='error',
+                                  tree_method='hist',
+                                  early_stopping_rounds=30)
             model.set_params(**params)
 
             t1 = time.time()
@@ -583,8 +612,7 @@ class Model3(Model):
             model2 = XGBClassifier(random_state=42,
                                    objective='multi:softprob',
                                    eval_metric='aucpr',
-                                   tree_method='gpu_hist',
-                                   gpu_id=0,
+                                   tree_method='hist',
                                    early_stopping_rounds=30,
                                    num_class=6)
             model2.set_params(**params)
@@ -599,7 +627,7 @@ class Model3(Model):
             return model2, train_time
     
 
-    def predict(self, X, th=0.496, name_out=True):
+    def predict(self, X, th=0.50012, name_out=True):
         """
         기존 함수와 차이
 
@@ -607,8 +635,7 @@ class Model3(Model):
 
         name_out : 이름으로 출력할지 라벨로 출력할지
         """
-        
-
+    
         if not isinstance(X, pd.DataFrame):
             X = self._to_frame(X, target=False)
             if X is None:
@@ -640,7 +667,7 @@ class Model3(Model):
 
         if name_out:
             # 라벨을 결함이름으로 변환
-            pred = pred.map(dict(zip([0,1,2,3,4,5,6], self.target)))
+            pred = pred.map(dict(zip([0,1,2,3,4,5,6], self.target))).to_numpy()
 
         return pred
         
@@ -662,8 +689,7 @@ class Model3(Model):
             if isinstance(df, (np.ndarray|list|tuple)):
                 df = pd.DataFrame(df, columns=self.features+self.target)
             
-            print(list(df))
-            X_test, y_true, _ = self.load_data(df=df, split=False)
+            X_test, y_true = self.load_data(df=df, mode='prepro')
             y_true = y_true.label
         else:
             _, X_test, _, y_true, _ = self.load_data()
@@ -692,59 +718,148 @@ def main():
     3. 루프로 상호작용 반복
     4. 특정 조건이 되면 종료
     """
+    print('프로그램 시작.')
+    # 모델 선택 단계
+    while True:
+        print('불러올 모델을 선택하세요. (model1, model2, model3)')
+        print('작업취소, 혹은 종료를 원할때 "q"를 입력하세요.')
+        inputs = input('입력 : ')
+        if inputs == 'model1':
+            model = Model1()
+            model_name = '회귀'
+        elif inputs == 'model2':
+            model = Model2()
+            model_name = '이진분류'
+        elif inputs == 'model3':
+            model = Model3()
+            model_name = '다중분류'
+        elif inputs =='q':
+            break
+        else:
+            print('잘못된 입력입니다. model1, model2, model3 중 하나를 선택하세요.\n')
+            continue
+        
+        val_df= None
+        # 작업 단계
+        while True:
+            
+            print(f'{model_name}모델 작업을 선택하세요. (훈련, 검증데이터생성, 예측, 평가, 저장)')
+            inputs = input('입력 : ')
+            if inputs == 'q':
+                break
+
+            elif inputs == '훈련':
+                print(f'{model_name}모델 훈련시작.')
+                if model.model_num == 3:
+                    model.model, train_time = model.train(case=1)
+                    print(f'모델A 훈련완료. 소요시간 {train_time}초')
+                    model.model2, train_time = model.train(case=2)
+                    print(f'모델B 훈련완료. 소요시간 {train_time}초\n')
+                else:
+                    model.model, train_time = model.train()
+                    print(f'모델 훈련완료. 소요시간 {train_time}초\n')
+            
+            elif inputs == '검증데이터생성':
+                print('검증데이터는 csv파일로부터 랜덤으로 생성됩니다.')
+                while True:
+                    inputs = input('생성할 샘플숫자 입력(정수) : ')
+                    if inputs == 'q':
+                        break
+
+                    try:
+                        inputs = int(inputs)
+                    except:
+                        print('입력데이터가 정수가 아닙니다. 다시 입력해주세요.\n')
+                        continue
+                    else:
+                        val_df = model.make_val_data(n_samples=inputs)
+                        break
+
+                # 오류나서 None을 반환시 
+                if val_df is None:
+                    print('문제발생. 작업으로 돌아갑니다.')
+                else:
+                    print(f'검증데이터 생성 성공. shape = {val_df.shape}\n')
+            
+            elif inputs == '예측':
+                print('예측 : 데이터를 feature수에 맞게 입력하거나, 검증세트를 사용하세요.')
+                print('검증세트 사용시 "검증" 입력. 수기입력시 [featue1, feature2 .. ] 입력')
+                print(f'현재 모델 feature 수 : {len(model.features)}')
+                while True:
+                    inputs = input('입력 : ')
+                    if inputs == '검증':
+                        if val_df is None:
+                            print('검증세트가 없습니다. 재입력')
+                            continue
+                        else:
+                            pred = model.predict(val_df)
+
+                        if pred is None:
+                            print('문제발생. 작업으로 돌아갑니다.')
+                        else:
+                            print(f'검증세트에 대한 모델 예측값 : {pred}\n')
+                            break
+
+                    elif inputs == 'q':
+                        break
+                    
+                    else:
+                        try:
+                            inputs = ast.literal_eval(inputs)
+                        except:
+                            print('입력이 이상합니다. 재입력')
+                            continue
+
+                        if len(inputs) == len(model.features) and isinstance(inputs, (list|tuple)):
+                            pred = model.predict(inputs)
+                            if pred is None:
+                                print('문제발생. 작업으로 돌아갑니다.')
+                            else:
+                                print(f'입력값에 대한 모델 예측값 : {pred}\n')
+                                break
+                        else:
+                            print('feature숫자가 안맞거나, 입력이 이상합니다. 재입력')
+            
+            elif inputs == '평가':
+                print('평가 : 검증세트를 평가하거나, 현재성능을 평가')
+                print('검증세트를 평가할시 "검증" 입력. 현재성능을 평가할시 공란')
+                inputs = input('입력 : ')
+                
+                if inputs == '검증':
+                    if val_df is None:
+                        print('검증세트가 없습니다. 작업으로 돌아갑니다.')
+                        continue
+                    
+                    if model.model_num == 1:
+                        rmse, acc, r2 = model.performance(val_df)
+                        print(f'검증세트 rmse : {rmse:.3f}\tacc : {acc:.3f}\tr2 : {r2:.3f}\n')
+                    else:
+                        precision, recall, f1, acc = model.performance(val_df)
+                        print(f'검증세트 precision : {precision:.3f}\trecall : {recall:.3f}\tf1 : {f1:.3f}\tacc : {acc:.3f}\n')
+
+                elif inputs == '': # 공란입력
+                    if model.model_num == 1:
+                        rmse, acc, r2 = model.performance()
+                        print(f'현재성능 rmse : {rmse:.3f}\tacc : {acc:.3f}\tr2 : {r2:.3f}\n')
+                    else:
+                        precision, recall, f1, acc = model.performance()
+                        print(f'현재성능 precision : {precision:.3f}\trecall : {recall:.3f}\tf1 : {f1:.3f}\tacc : {acc:.3f}\n')
+                else:
+                    print('입력이 잘못되었습니다. 작업으로 돌아갑니다.')
+                
+            elif inputs =='저장':
+                print(f'{model_name}모델을 data 폴더에 pkl로 저장합니다.')
+                try:
+                    model.save_model()
+                except:
+                    print('모델 저장실패. 작업으로 돌아갑니다.')
+                else:
+                    print('모델 저장 성공')
+            
+            else:
+                print('알맞는 명령어를 입력해주세요 : 훈련, 검증데이터생성, 예측, 평가, 저장 중 하나')
     
-    #### 사용예시 ####
-    # 모델 인스턴스 생성
-    model1 = Model1()
-    # 검증용 데이터 생성
-    val_df1 = model1.make_val_data(10)
-    # 검증데이터로 예측해보기
-    print(model1.predict(val_df1.drop(columns='Rings')))
-    # 아무렇게나 만든 데이터로 예측해보기
-    print('\n모델1 아무데이터 추론 :',model1.predict(['F', 0.545, 0.44, 0.15, 0.9475, 0.366, 0.239, 0.275]))
-    # 성능확인
-    rmse, acc, r2 = model1.performance()
-    print(f'rmse : {rmse:.3f}\tacc : {acc:.3f}\tr2 : {rmse:.3f}')
-    
-
-    # 모델2와 3도 해보기
-    model2 = Model2()
-    val_df2 = model2.make_val_data(100)
-    rand_array = np.array([[ 1.24140625e+02,  4.78142131e+01,  5.21328520e-02,
-                            -1.51406880e-01,  4.17558528e+00,  2.54255278e+01,
-                            7.13501976e+00,  5.31724834e+01],
-                        [ 1.05539062e+02,  4.83077540e+01,  3.66509117e-01,
-                            2.96793264e-01,  2.20903010e+00,  1.31392638e+01,
-                            9.87977866e+00,  1.38390883e+02],
-                        [ 7.79531250e+01,  3.10062643e+01,  1.99492832e+00,
-                            9.38811845e+00,  1.58520067e+01,  4.86277479e+01,
-                            3.03553347e+00,  8.03196720e+00]])
-    print('\n모델2 아무데이터 추론 :',model2.predict(rand_array))
-    precision, recall, f1, acc = model2.performance()
-    print(f'precision : {precision:.3f}\trecall : {recall:.3f}\tf1 : {f1:.3f}\tacc : {acc:.3f}')
-
-
-    model3 = Model3()
-    val_df3 = model3.make_val_data(50)
-    print('모델3 검증세트 추론 :',list(model3.predict(val_df3)))
-
-    print('\n모델3 기본성능 확인')
-    precision, recall, f1, acc = model3.performance()
-    print(f'precision : {precision:.3f}\trecall : {recall:.3f}\tf1 : {f1:.3f}\tacc : {acc:.3f}')
-
-    print('\n모델3 랜덤검증성능 확인')
-    precision, recall, f1, acc = model3.performance(df=val_df3)
-    print(f'precision : {precision:.3f}\trecall : {recall:.3f}\tf1 : {f1:.3f}\tacc : {acc:.3f}')
-
-    # model1 훈련시켜보기
-    model1.model, time = model1.train(params=None, df=model1.make_val_data(3000))
-    print(f'훈련소요 시간 : {time:.3f}초')
-    
-    # 훈련시키고 input받아서 predict해보기
-    # Ex . ['F', 0.545, 0.44, 0.15, 0.9475, 0.366, 0.239, 0.275]
-    inputs = input("회귀모델 예시데이터 입력 : ")
-    inputs = ast.literal_eval(inputs)
-    print(model1.predict(inputs))
+        
     
 # py 실행하면 main()실행
 if __name__ == '__main__':
